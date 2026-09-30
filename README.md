@@ -55,9 +55,33 @@ Options persist in local storage. Each new match receives an immutable snapshot 
 
 The Network Lab is intentionally hidden from regular players. In development and E2E it is enabled automatically; in a published build, add `?debug=network` to the URL to show **Network scenarios** on the main menu. Select a scenario and deterministic seed, then choose **Apply**. The selection survives refreshes and clears cached Ranking and Match History queries.
 
-The same controls are available from the browser console through `pirateBattleDebug.network`: use `list()`, `current()`, `select('slow', 1337)`, or `reset()`. This keeps the demonstration tools available without exposing technical failure controls in the normal player experience.
+The same controls are available from the browser console through `pirateBattleDebug.network`. This keeps the demonstration tools available without exposing technical failure controls in the normal player experience.
 
-Available scenarios cover success, empty data, multiple pages, slow or variable latency, out-of-order responses, timeout, connection failure, HTTP 429/503, isolated Ranking or History errors, timeout after a committed match, and an unavailable registration endpoint at match completion.
+| Console command | Result |
+| --- | --- |
+| `pirateBattleDebug.network.list()` | Return every scenario definition with its ID, label, and description |
+| `pirateBattleDebug.network.current()` | Return the active `{ id, seed }` configuration |
+| `pirateBattleDebug.network.select(id, seed?)` | Activate a scenario, reset request ordering, persist it, and clear the query cache |
+| `pirateBattleDebug.network.reset()` | Restore Success with seed `1337` and clear mock match data, pending submissions, and query cache |
+
+`select` accepts one of the following IDs and an optional safe-integer seed; omitted seeds default to `1337`.
+
+| Scenario ID | Simulated behavior |
+| --- | --- |
+| `success` | Normal successful responses with a short fixed delay |
+| `empty` | Empty Ranking and Match History pages |
+| `multiple-pages` | Complete fixture sets for pagination |
+| `slow` | Every request takes 2.5 seconds |
+| `variable-latency` | Reproducible latency derived from the selected seed |
+| `out-of-order` | Alternating slow and fast responses so a newer request can finish first |
+| `timeout` | Responses exceed the Axios client timeout |
+| `network-error` | All record API calls fail at the network layer |
+| `http-4xx` | All record API calls return HTTP 429 |
+| `http-5xx` | All record API calls return HTTP 503 |
+| `ranking-error` | Only Ranking requests return HTTP 503 |
+| `history-error` | Only Match History requests return HTTP 503 |
+| `post-commit-timeout` | Registration is committed before its response times out |
+| `offline-at-finish` | Match registration remains unavailable until another scenario is selected |
 
 To reproduce registration recovery:
 
