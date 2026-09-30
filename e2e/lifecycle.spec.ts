@@ -51,6 +51,7 @@ test('pauses explicitly and on focus loss without skipping time', async ({ page 
   await advanceGame(page, 1_000);
   expect((await gameState(page)).timeRemaining).toBeCloseTo(44, 4);
 
+  await expect(page.getByRole('button', { name: 'Pause game' })).toBeEnabled();
   await page.evaluate(() => window.dispatchEvent(new Event('blur')));
   await expect(page.getByRole('heading', { name: 'Paused' })).toBeVisible();
   const pausedAt = (await gameState(page)).timeRemaining;
