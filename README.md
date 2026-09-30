@@ -6,7 +6,7 @@ Pirate Battle is a browser-based, single-player naval shooter implemented with R
 
 ### Public deployment
 
-Play the production build at [game-developer-challenge-ten.vercel.app](https://game-developer-challenge-ten.vercel.app). The published build uses the same in-browser MSW handlers and requires no private service.
+Play the production build at [game-developer-challenge-five.vercel.app](https://game-developer-challenge-five.vercel.app). The published build uses the same in-browser MSW handlers and requires no private service.
 
 ### Requirements and setup
 
