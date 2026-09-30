@@ -1,5 +1,5 @@
 {
-  "capturedAt": "2026-09-30T11:18:24.876Z",
+  "capturedAt": "2026-09-30T21:39:07.737Z",
   "environment": {
     "platform": "darwin 24.5.0 (arm64)",
     "cpu": "Apple M1 Pro",
@@ -18,83 +18,83 @@
     "playerProtection": true
   },
   "combat": {
-    "sampleCount": 21572,
-    "measuredDurationMs": 179861.9,
-    "averageFps": 119.93646236362454,
-    "averageFrameTimeMs": 8.33774800667532,
-    "p95FrameTimeMs": 9.200000000000728,
-    "p99FrameTimeMs": 9.30000000000291,
-    "maximumFrameTimeMs": 108.60000000000002,
-    "framesOver16_67Ms": 1,
-    "framesOver33_33Ms": 1,
-    "averageEntities": 33.15339328759503,
+    "sampleCount": 10527,
+    "measuredDurationMs": 179996.3,
+    "averageFps": 58.484535515452265,
+    "averageFrameTimeMs": 17.09853709508882,
+    "p95FrameTimeMs": 24.09999999999127,
+    "p99FrameTimeMs": 25,
+    "maximumFrameTimeMs": 91.80000000000007,
+    "framesOver16_67Ms": 6273,
+    "framesOver33_33Ms": 2,
+    "averageEntities": 32.925524840885345,
     "maximumEntities": {
-      "ships": 47,
-      "enemies": 46,
-      "projectiles": 8,
-      "effects": 10,
-      "total": 62
+      "ships": 49,
+      "enemies": 48,
+      "projectiles": 7,
+      "effects": 8,
+      "total": 60
     },
     "finalEntities": {
-      "ships": 47,
-      "enemies": 46,
-      "projectiles": 3,
-      "effects": 2,
-      "total": 52
+      "ships": 49,
+      "enemies": 48,
+      "projectiles": 4,
+      "effects": 4,
+      "total": 57
     }
   },
   "memory": {
     "samples": [
       {
         "label": "Menu baseline",
-        "jsHeapUsedBytes": 4741568,
-        "jsHeapTotalBytes": 5341184,
-        "domNodes": 125,
+        "jsHeapUsedBytes": 4755908,
+        "jsHeapTotalBytes": 6127616,
+        "domNodes": 126,
         "documents": 2,
         "canvases": 0
       },
       {
         "label": "After cycle 1",
-        "jsHeapUsedBytes": 7594356,
-        "jsHeapTotalBytes": 8486912,
-        "domNodes": 157,
+        "jsHeapUsedBytes": 7654960,
+        "jsHeapTotalBytes": 8749056,
+        "domNodes": 158,
         "documents": 2,
         "canvases": 0
       },
       {
         "label": "After cycle 2",
-        "jsHeapUsedBytes": 7884764,
-        "jsHeapTotalBytes": 9011200,
-        "domNodes": 157,
+        "jsHeapUsedBytes": 7974516,
+        "jsHeapTotalBytes": 9273344,
+        "domNodes": 158,
         "documents": 2,
         "canvases": 0
       },
       {
         "label": "After cycle 3",
-        "jsHeapUsedBytes": 8128668,
-        "jsHeapTotalBytes": 9011200,
-        "domNodes": 157,
+        "jsHeapUsedBytes": 8418980,
+        "jsHeapTotalBytes": 9273344,
+        "domNodes": 158,
         "documents": 2,
         "canvases": 0
       },
       {
         "label": "After cycle 4",
-        "jsHeapUsedBytes": 8331708,
-        "jsHeapTotalBytes": 9011200,
-        "domNodes": 157,
+        "jsHeapUsedBytes": 8630580,
+        "jsHeapTotalBytes": 9535488,
+        "domNodes": 158,
         "documents": 2,
         "canvases": 0
       },
       {
         "label": "After cycle 5",
-        "jsHeapUsedBytes": 8592892,
-        "jsHeapTotalBytes": 9273344,
-        "domNodes": 157,
+        "jsHeapUsedBytes": 8937288,
+        "jsHeapTotalBytes": 9535488,
+        "domNodes": 158,
         "documents": 2,
         "canvases": 0
       }
     ],
-    "growthAfterWarmupBytes": 998536,
+    "growthAfterWarmupBytes": 1282328,
     "nodeGrowthAfterWarmup": 0,
     "allowedHeapGrowthBytes": 5242880,
     "stable": true
@@ -103,6 +103,7 @@
     "Headed Chromium is required so the reference run uses the machine GPU; headless Chromium used SwiftShader and was retained only as a diagnostic result.",
     "Forced garbage collection makes lifecycle samples comparable but does not measure GPU-driver allocations directly.",
     "The player receives profiling-only health protection; spawning, AI, projectiles, collisions, effects, audio, rendering, and the real-time ticker remain active.",
-    "The Playwright process and Vite preview server add background system load, so results should be compared on the same machine."
+    "The Playwright process and Vite preview server add background system load, so results should be compared on the same machine.",
+    "The reference display can switch between 60 Hz and 120 Hz; the pass criteria use average FPS plus a 25 ms p95 guardrail so both modes remain comparable."
   ]
 }

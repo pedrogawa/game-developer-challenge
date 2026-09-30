@@ -11,3 +11,7 @@ The desktop Chromium project runs the complete suite. The mobile Chromium projec
 | Desktop/mobile visual baselines | `visual.spec.ts` |
 
 Run `npm run test:e2e`. Failures retain Playwright traces, screenshots, and video in `test-results/`. Open the generated report with `npm run test:e2e:report`. Update intentional visual changes with `npm run test:e2e:update`.
+
+## Latest verified run
+
+The full matrix was last verified on 2026-09-30: **27 passed, 1 intentionally skipped**. The skip is the portrait-only mobile orientation case in the desktop project; the same case passes in the mobile project. The current HTML result is versioned at [`../playwright-report/index.html`](../playwright-report/index.html).

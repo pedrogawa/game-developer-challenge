@@ -1,46 +1,106 @@
-# Gameplay architecture
+# Pirate Battle architecture
 
-This first milestone intentionally implements only the local combat loop described in the challenge.
+## React and PixiJS integration
 
-- `GameSimulation` owns continuous state and rules. Its update receives elapsed seconds and an input snapshot, then consumes the complete elapsed interval in bounded substeps. Movement, cooldowns, enemy AI, spawning, collisions, and the match timer therefore remain stable during slow frames without allowing large collision steps.
-- `PixiGame` owns the PixiJS application and mirrors simulation entities into reusable display objects. React receives a throttled semantic snapshot for the HUD; the terminal snapshot is emitted once, so the result screen does not trigger React rendering on every animation frame.
-- The renderer follows the browser viewport with adaptive device-density scaling. Desktop retains antialiasing and up to 2× density; touch devices use a 1×, non-antialiased WebGL framebuffer and cache the static tiled map as one texture to reduce fill rate and draw work. A cover transform preserves the arena aspect ratio, and a player-following camera remains clamped to the arena boundaries. Inputs are semantic actions rather than screen coordinates, so resizing does not change their coordinate interpretation.
-- React owns the accessible HUD, loading/error states, pause/result overlays, keyboard input, and simultaneous pointer controls. A shared dialog primitive traps and restores focus, while the inactive game surface becomes inert. Visual HUD updates stay outside live regions; a separate semantic summary remains queryable and only meaningful combat events are announced.
-- React also owns the initial main menu and its accessible Options dialog. They are assembled from the supplied scene background, menu panel, title, button-state sprites, controls, ship, and brand mark; PixiJS is mounted only after Play starts a match.
-- The responsive Captain's Log shell owns the Ranking and Match History views. Typed REST contracts cover player identity, completed matches, ranking rows, pagination, registration responses, and pending submissions. Both tabs render initial loading, empty, error, retry, cached-data background refresh, and pagination states.
-- A scoped Axios client performs all Ranking and History HTTP operations. TanStack Query keys isolate ranking pages by gameplay configuration and history pages by player, forward cancellation signals to Axios, retry only transient failures, retain appropriate page data during navigation, and invalidate both resource families after a successful registration. Stale queries refetch when a tab is shown again, while TanStack Query's request tracking prevents older responses from replacing newer results for the same key.
-- MSW supplies the browser REST API in development and production builds. The same typed handlers are exposed through a Node `setupServer` adapter for tests. Ranking combines deterministic other-captain fixtures with confirmed player records, filters by the exact session/spawn configuration, and orders by score, effective duration, timestamp, then match ID. History is scoped to the persistent player ID. Both resources paginate on the API boundary.
-- A persistent mock-scenario controller drives success, empty, multi-page, slow, seeded variable-latency, out-of-order, timeout, network, HTTP 4xx/5xx, endpoint-specific failure, commit-then-timeout, and offline-at-finish modes. Request sequence and the chosen seed make timing reproducible. The Network Lab uses this controller directly, clears stale query data after changes, and can reset confirmed records, the pending outbox, the last completed result, scenario state, and deterministic counters.
-- Reaching a terminal state freezes an immutable result draft. The player confirms a validated 2–20 character captain name before that result is saved locally, enqueued, and submitted. POST registration is idempotent by match ID: repeats return the existing record and never create a second Ranking or History entry. Successful registration removes the outbox item and invalidates both query families; transient failures remain retryable from the result, main menu, Captain's Log, application startup, or the browser `online` event. An outstanding submission never blocks starting another match. Abandoned and unconfirmed results are never enqueued.
-- Options are validated and persisted in local storage. Session duration supports 60–180 seconds in 30-second increments; enemy spawn time supports 2–15 seconds in 1-second increments. Starting a match copies these values into an immutable match snapshot, so a running simulation cannot be changed by later option edits.
-- The main menu exposes keyboard commands and identifies the availability of touch controls before a match starts. The result dialog collects the persistent captain name and reports whether the completed match was saved, is being saved, or failed to persist.
-- Gameplay tuning is centralized in `src/game/config.ts`, including simulation timing, starting positions, spawn delay and locations, safe spawn distance, enemy distribution sequence, health, movement, rotations, weapons, damage, projectile behavior, effects, cooldowns, and Shooter ranges. Simulation systems consume this configuration without embedding balance values in their control flow.
-- All gameplay imagery and audio paths reference the supplied `assets` directory. The arena is assembled from the provided 64×64 water and island tiles rather than a painted CSS background; HUD counters, controls, icons, and ship health bars use the supplied UI sprites and their documented layout measurements. The shared weapon cooldown is exposed as a semantic snapshot and drawn as a receding overlay on all touch fire controls; taps during cooldown are rejected before pointer capture. Audio feedback covers front and broadside fire, impacts, explosions, score, low health, pause/resume, match outcomes, and a low-volume ocean loop. Mobile audio is prewarmed, rate-limited per sound, and capped at six simultaneous instances; every active instance is released with the Pixi lifecycle.
-- Islands use the complete 4×4 coast tile set: sand forms every outer edge and grass stays in the center. Rocks and plants from the same tilesheet are placed along the sand with a seeded generator, providing visual variety without making regression tests nondeterministic.
-- Circular ship/projectile bounds and rectangular island bounds keep collision rules deterministic and inexpensive. Projectiles are removed immediately after their first hit, obstacle collision, range expiry, or arena exit.
-- The Pixi application, explicit ticker callback, display objects, custom water texture, active audio instances, pending resize animation frame, resize observer, keyboard listeners, and input state are disposed during unmount/restart, including the React Strict Mode development cycle. Async initialization uses a disposal guard before attaching loaded resources.
-- Runtime allocation pressure is bounded by pools for enemy, projectile, effect, and audio views. Live-entity sets are reused, health masks update only when health changes, and simulation arrays compact in place. Chaser contact creates one explosion effect instead of stacking a separate hit effect at the same coordinates. A profiling-only bridge records raw animation-frame intervals and entity counts without replacing the real ticker or rules.
-- Touch gameplay is landscape-only. React detects touch capability using `maxTouchPoints`, observes media-query, resize, and orientation events, makes the arena inert in portrait, and displays an accessible rotation prompt. The Pixi ticker skips simulation and dynamic scene work while gameplay is blocked, paused, complete, or covered by Options; rotating back resumes the same simulation rather than recreating it.
+React owns application state and document UI: the main menu, Options, Ranking, Match History, loading and error states, the HUD, keyboard and touch input, orientation blocking, pause, and the result dialog. `PixiGame` is mounted only for an active match and owns the PixiJS `Application`, stage, camera, map, ships, projectiles, effects, and audio.
 
-## Performance reference
+The boundary between both layers is deliberately small:
 
-`npm run test:performance` profiles the optimized Vite build in headed Chromium so macOS can use the Metal renderer. It records average FPS, frame-time p95/p99, slow-frame counts, and entity high-water marks during a seeded three-minute match. The same run forces garbage collection after five start/play/exit cycles and records JS heap, DOM documents/nodes, and remaining canvases. Machine-readable evidence lives in `performance/evidence/latest.json`; the human-readable result and limitations live in `performance/REPORT.md`.
+- React passes an immutable `GameOptions` snapshot, a semantic `Set<InputAction>`, pause/restart requests, and whether rendering is suspended.
+- `PixiGame` owns `GameSimulation` and sends React a throttled `GameSnapshot` containing health, score, remaining time, pause/result state, and weapon cooldown. A terminal snapshot is emitted once.
+- Gameplay input is expressed as actions rather than screen coordinates, so keyboard, touch, camera movement, and viewport resizing all use the same rules.
+- React HUD updates are kept outside live regions. A separate semantic status announces only meaningful events such as damage, scoring, pause, and match completion.
 
-Balance values and documented option limits live in `src/game/config.ts`.
+Desktop renders with antialiasing and at most 2× device density. Touch devices use a 1× non-antialiased WebGL framebuffer and cache the static tile map as one texture. A cover transform fills the viewport while the player-following camera remains clamped to the arena. Touch gameplay is landscape-only; portrait mode makes the arena inert, suspends the ticker work, and presents an accessible rotation prompt without recreating the match.
+
+## Simulation lifecycle
+
+`GameSimulation` is independent of React and Pixi display objects. Every ticker update receives elapsed seconds and the current input snapshot. It consumes the complete elapsed interval in substeps of at most 50 ms, which keeps movement and collision checks stable after a slow frame without discarding match time.
+
+Each substep performs, in order:
+
+1. Reduce the match timer and every active weapon cooldown.
+2. Apply player rotation, forward movement, and requested fire actions.
+3. Update Chaser and Shooter AI, including steering, separation, and enemy fire.
+4. Move projectiles and expire those outside their lifetime or arena.
+5. Resolve ship, island, projectile, and contact collisions.
+6. Advance effects, compact dead entities in place, and schedule deterministic spawns.
+7. End the match once time reaches zero or the player ship is destroyed.
+
+Pause, focus loss, portrait blocking, menus, and completed matches suspend both simulation and dynamic scene work. Resuming does not replay elapsed time or retain pressed controls. A new match creates a new immutable option snapshot and simulation instance.
+
+## Collision model
+
+Moving ships and projectiles use circular bounds; islands use axis-aligned rectangles derived from the tile map. Ship movement is accepted only when the candidate position stays inside the arena and does not intersect an island. Projectiles are removed on their first ship hit, obstacle hit, lifetime expiry, or arena exit, preventing duplicate damage and unbounded entity growth.
+
+Chasers damage the player on contact and destroy themselves without awarding a point. The contact produces one explosion instead of stacking a hit effect at the same coordinates. Shooters separate on contact, maintain range, rotate toward the player, and fire with their own cooldown. Player-owned projectiles can score a destroyed enemy only once.
+
+## Resource management
+
+All visual and audio paths come from the supplied `assets/` directory. The arena uses the supplied 64×64 water and full 4×4 coast tile set: sand forms every island edge, grass stays inside, and seeded rocks/plants decorate sand without making visual tests nondeterministic. HUD panels, controls, icons, and enemy health bars use the supplied UI exports.
+
+Enemy, projectile, effect, and audio views are pooled and reused. Live-ID sets are cleared and reused per frame, health masks change only when health changes, and simulation arrays compact in place. On touch devices audio is prewarmed, rate-limited per sound, and capped at six simultaneous instances. The shared weapon cooldown is exposed to React as a ratio; touch fire buttons draw a receding overlay and reject taps during cooldown before pointer capture.
+
+Unmount/restart disposes the ticker callback, Pixi application and display tree, generated water texture, cached map texture, resize observer, pending animation frame, active and pooled audio, keyboard listeners, test/profiling bridges, and input state. Async initialization checks a disposal guard before attaching loaded resources, including during React Strict Mode's development lifecycle.
+
+## Local persistence
+
+The solution needs no account, secret, database, or private service. It persists demonstration data in browser `localStorage`:
+
+| Key | Contents |
+| --- | --- |
+| `pirate-battle-player-v1` | Stable player ID and validated 2–20 character captain name |
+| `pirate-battle-options-v1` | Session duration and spawn interval |
+| `pirate-battle-last-match-v1` | Last player-confirmed completed match |
+| `pirate-battle-pending-matches-v1` | Bounded outbox of up to 100 pending registrations |
+| `pirate-battle-api-matches-v1` | Matches confirmed by the local MSW API |
+| `pirate-battle-mock-scenario-v1` | Selected deterministic network scenario and seed |
+
+Stored values are parsed defensively and invalid values fall back to safe defaults. Starting a match copies options so later edits cannot mutate an active battle. A completed simulation first produces an immutable result draft; it is persisted and submitted only after the player confirms the captain name. Abandoned and unconfirmed matches are not recorded.
+
+## Ranking and Match History
+
+The REST-shaped data model is declared in `src/data/contracts.ts`:
+
+- `PlayerIdentity` identifies the local player.
+- `MatchRecord` contains match/player IDs, captain name, timestamp, score, effective duration, end reason, and the exact `GameOptions` snapshot.
+- `RankingRecord` adds the calculated rank.
+- `PaginatedResponse<T>`, `RankingParams`, and `HistoryParams` define pagination and filters.
+- `RegisterMatchRequest`/`RegisterMatchResponse` define idempotent registration; `PendingMatch` records outbox attempts.
+
+Axios uses a scoped `/api` client with a six-second timeout and forwards cancellation signals. MSW implements that API in development and the public production build, while `setupServer` exposes the same handlers to Vitest. Registration is idempotent by `matchId`: a retry returns the existing record with `created: false` and cannot duplicate Ranking or History entries. Ranking filters by the exact duration/spawn configuration and orders by score, effective duration, timestamp, and match ID. History is scoped to the persistent player ID. Both endpoints paginate at the API boundary.
+
+TanStack Query keys isolate Ranking by page, page size, and gameplay configuration, and History by player, page, and page size. Pagination retains prior data only within the compatible query family. Queries are stale on revisit, forward abort signals, and are invalidated after successful registration. Request tracking prevents a slower older request from overwriting newer data.
+
+Before every POST, the completed match is placed in the persistent outbox and its attempt metadata is updated. Success removes it and invalidates Ranking and History caches. Transient failure leaves it available through **Retry save** on the result or **Retry sync** elsewhere. Recovery also runs on application startup and the browser `online` event, with a single-flight guard preventing concurrent flushes. Legacy completed-match storage is migrated into the same outbox. Deterministic MSW scenarios cover offline registration, timeout after server commit, out-of-order responses, network errors, HTTP errors, slowness, empty data, and multiple pages.
+
+## Testing and profiling reports
+
+The reproducible commands and versioned evidence are:
+
+- `npm run validate`: strict TypeScript, ESLint, Vitest, production build, and the full Playwright matrix.
+- `npm run test:e2e`: desktop Chromium coverage plus the primary mobile flow and desktop/mobile visual regressions. The coverage map is in [`e2e/README.md`](e2e/README.md), and the generated HTML report is versioned at [`playwright-report/index.html`](playwright-report/index.html).
+- `npm run test:performance`: an optimized-build, headed-Chromium three-minute combat profile and five start/play/exit lifecycle cycles. The readable report is [`performance/REPORT.md`](performance/REPORT.md), raw evidence is [`performance/evidence/latest.json`](performance/evidence/latest.json), and the HTML report is [`performance/playwright-report/index.html`](performance/playwright-report/index.html).
+- Visual baselines are versioned under `e2e/visual.spec.ts-snapshots/`; profiling evidence includes `performance/evidence/three-minute-combat.png`.
+
+The repository includes `package-lock.json`, uses `npm ci`, requires Node.js 22.12 or newer, and defines the Vite build/output in `vercel.json`. A clean checkout can install, test, build, and run without environment variables or private services. The production deployment uses the same local MSW API and browser storage as local development.
 
 ## Balance decisions
 
-- The default 90-second session and six-second spawn interval provide both enemy types without saturating the arena; Options expose the documented safe ranges without allowing a running match to mutate.
-- A maximum simulation step of 50 ms consumes the complete elapsed interval while preventing large collision jumps after a slow frame.
-- Chasers trade ranged damage for higher contact pressure and never award points when they destroy themselves against the player. Shooters keep distance, rotate toward the player, and use a longer weapon cooldown.
-- Front fire is faster and precise; broadsides trade a longer cooldown for three parallel projectiles. Projectiles expire quickly enough to keep entity counts bounded and visual ownership clear.
-- Spawn points are deterministic in type order, outside islands, and filtered by their distance from the player to avoid unavoidable immediate damage.
-- Collision shapes intentionally use circles for moving entities and rectangles for islands. This keeps outcomes deterministic, readable, and inexpensive at the documented maximum spawn rate.
+- The default match lasts 90 seconds and spawns an enemy every six seconds. Options safely expose 60–180 seconds in 30-second steps and 2–15 second spawns in one-second steps.
+- A 50 ms maximum simulation step consumes all elapsed time while preventing large collision jumps.
+- Chasers trade ranged damage for higher contact pressure. Shooters keep distance and use a longer weapon cooldown.
+- Front fire is faster and precise; a broadside trades a longer cooldown for three parallel projectiles. The three controls share the player ship's cooldown.
+- Spawn types follow a deterministic distribution. Candidate positions must be outside islands and a safe distance from the player to avoid unavoidable immediate damage.
+- Short projectile lifetimes and immediate removal after collision bound the entity count at the documented maximum spawn rate.
+- Circle/rectangle collision shapes favor deterministic, readable, inexpensive gameplay over pixel-perfect hull geometry.
 
 ## Known limitations
 
-- Ranking, History, and player identity are demonstration data stored in browser local storage through MSW. They are intentionally local to a browser profile and are not shared between devices.
-- The game has no account authentication or remote backend; this keeps the published challenge independent of private services.
-- Performance evidence is specific to the documented hardware, browser, viewport, and refresh rate. Headless Chromium selected SwiftShader on the reference Mac, so the official GPU profile uses headed Chromium.
-- Forced garbage collection makes lifecycle heap samples comparable but cannot directly measure allocations retained inside the GPU driver.
-- The renderer uses the supplied 1× PNG exports. Desktop density is capped at 2×, while touch gameplay deliberately renders at 1× without antialiasing to keep iOS fill rate and GPU memory bounded.
+- Ranking, History, player identity, and the mocked API database are local to one browser profile and are not shared between devices.
+- There is no authentication or remote backend; this is intentional so the challenge remains self-contained and deployable without secrets.
+- Refreshing during an unconfirmed result loses that draft; confirmed pending matches survive refresh through the outbox.
+- Touch rendering deliberately uses 1× density without antialiasing to keep iOS fill rate and GPU memory bounded; it can look softer than desktop.
+- Performance evidence is hardware/browser/viewport-specific. Headless Chromium used SwiftShader on the reference Mac, so the official GPU profile uses headed Chromium.
+- Forced garbage collection improves lifecycle comparison but does not measure allocations retained inside the GPU driver.
+- Profiling raises player health only to guarantee the entire three-minute sample; spawning, AI, collisions, projectiles, effects, audio, ticker, and rendering remain active.

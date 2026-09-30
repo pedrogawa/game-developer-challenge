@@ -325,8 +325,8 @@ Verifique o uso de memória após cinco ciclos de iniciar, jogar e sair, investi
 
 - `npm run test:performance` creates the optimized build, launches hardware-accelerated Chromium, runs five lifecycle cycles, and measures a real three-minute match.
 - The reference scenario uses seed `1337`, a 180-second match, two-second spawns, a 1440×900 viewport, and DPR 1. Profiling-only player protection prevents an early death; rules, AI, collisions, projectiles, effects, audio, ticker, and rendering remain active.
-- The Apple M1 Pro/Chromium 153 Metal run recorded 119.94 average FPS, a 9.20 ms p95, one sample above 16.67 ms, and at most 62 entities.
-- After cache warmup, five cycles produced 0.95 MiB of heap growth, no DOM-node growth, and no canvas left on the menu.
+- The latest Apple M1 Pro/Chromium 153 Metal run recorded 58.48 average FPS on a 60 Hz compositor, a 24.10 ms p95, two samples above 33.33 ms, and at most 60 entities. The raw numbers remain versioned even when a run exposes environmental variance.
+- After cache warmup, five cycles produced 1.22 MiB of heap growth, no DOM-node growth, and no canvas left on the menu.
 - Full evidence is available in `performance/REPORT.md`, `performance/evidence/latest.json`, `performance/evidence/three-minute-combat.png`, and `performance/playwright-report/`.
 - `performance/HEADLESS_DIAGNOSTIC.md` separately documents the headless Chromium limitation that selected SwiftShader instead of the machine GPU.
 
