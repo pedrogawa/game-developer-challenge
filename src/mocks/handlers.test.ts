@@ -1,7 +1,7 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import type { MatchRecord, PaginatedResponse, RankingRecord, RegisterMatchResponse } from '../data/contracts';
 import { selectMockScenario } from './controls';
-import { seededLatency } from './scenarios';
+import { getRequestSequence, seededLatency } from './scenarios';
 import { resetMockServer, startMockServer, stopMockServer } from './server';
 
 const API = 'http://localhost/api';
@@ -109,6 +109,7 @@ describe('shared MSW scenarios', () => {
   it('can complete a newer request before an older one', async () => {
     scenario('out-of-order');
     const first = fetch(rankingUrl).then(() => 'first');
+    await expect.poll(getRequestSequence).toBe(1);
     const second = fetch(rankingUrl).then(() => 'second');
     expect(await Promise.race([first, second])).toBe('second');
     await Promise.all([first, second]);

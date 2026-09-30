@@ -95,6 +95,8 @@ export const resetMockScenario = () => {
 
 export const nextRequestSequence = () => requestSequence++;
 
+export const getRequestSequence = () => requestSequence;
+
 export const resetScenarioSequence = () => { requestSequence = 0; };
 
 const hashText = (text: string, seed: number) => {
