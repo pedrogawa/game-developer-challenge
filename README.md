@@ -6,7 +6,7 @@ Pirate Battle is a browser-based, single-player naval shooter implemented with R
 
 ### Public deployment
 
-The production URL will be added here after the repository is linked and deployed to Vercel. The published build uses the same in-browser MSW handlers and requires no private service.
+Play the production build at [game-developer-challenge-ten.vercel.app](https://game-developer-challenge-ten.vercel.app). The published build uses the same in-browser MSW handlers and requires no private service.
 
 ### Requirements and setup
 
@@ -83,6 +83,8 @@ Use **Reset mock data** to restore the Success scenario and seed `1337`, clear c
 | `npm run test:performance` | Build and run the three-minute hardware-accelerated profile |
 | `npm run test:performance:report` | Open the performance Playwright report |
 | `npm run validate` | Run types, lint, unit tests, build, and the complete E2E suite |
+
+Set `PLAYWRIGHT_BASE_URL` to run the E2E suite against an existing deployment instead of starting the local Vite server.
 
 E2E failures retain traces, screenshots, and video under `test-results/`. Versioned reports are available in [`playwright-report/`](playwright-report/) and [`performance/playwright-report/`](performance/playwright-report/). Performance evidence is documented in [`performance/REPORT.md`](performance/REPORT.md) and [`performance/evidence/latest.json`](performance/evidence/latest.json).
 

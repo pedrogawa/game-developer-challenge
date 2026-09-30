@@ -55,8 +55,13 @@ test.beforeEach(async ({ page }) => {
   });
 });
 
-test.afterEach(async ({ page }) => {
-  expect(unexpectedBrowserErrors.get(page) ?? [], 'browser console and page errors').toEqual([]);
+test.afterEach(async ({ page }, testInfo) => {
+  const errors = unexpectedBrowserErrors.get(page) ?? [];
+  const relevantErrors = testInfo.title === 'recovers an offline submission after refresh'
+    ? errors.filter((error) => error !== 'console.error: Failed to load resource: net::ERR_FAILED')
+    : errors;
+
+  expect(relevantErrors, 'browser console and page errors').toEqual([]);
 });
 
 export const startGame = async (page: Page) => {
