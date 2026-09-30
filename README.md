@@ -42,6 +42,8 @@ npm run preview
 
 Keyboard and touch actions can be combined. Losing focus or hiding the tab pauses the active match automatically.
 
+Touch gameplay requires landscape orientation. Menus remain available in portrait, but starting or returning to an active battle displays a rotation prompt and suspends PixiJS until the device is landscape again.
+
 ### Gameplay configuration
 
 Open **Options** from the main menu to configure:
@@ -368,7 +370,7 @@ Run the shared MSW integration suite with `npm test`.
 
 ## Interface, assets, and accessibility notes
 
-The game supports both portrait and landscape orientation on phones and tablets. Changing orientation or viewport size resizes the PixiJS renderer and camera without restarting or changing the active simulation. HUD and touch controls respect browser safe-area insets, and touch targets keep a minimum 44×44 CSS-pixel hit area.
+Menus, Options, Ranking, and Match History support portrait and landscape on phones and tablets. Touch gameplay is landscape-only: portrait displays an accessible rotation prompt and suspends combat until the viewport becomes landscape, without restarting or changing the active simulation. The renderer and camera then resize to the available viewport. HUD and touch controls respect browser safe-area insets, and touch targets keep a minimum 44×44 CSS-pixel hit area.
 
 All visual and audio resources used by the game come from the supplied [`assets/`](assets/) package. The UI uses the individual PNG exports documented by the supplied UI atlases. See [`CREDITS.md`](CREDITS.md) for provenance details; no external fonts, images, or audio resources were added.
 

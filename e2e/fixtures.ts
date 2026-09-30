@@ -57,14 +57,19 @@ test.beforeEach(async ({ page }) => {
 
 test.afterEach(async ({ page }, testInfo) => {
   const errors = unexpectedBrowserErrors.get(page) ?? [];
-  const relevantErrors = testInfo.title === 'recovers an offline submission after refresh'
-    ? errors.filter((error) => error !== 'console.error: Failed to load resource: net::ERR_FAILED')
-    : errors;
+  const expectedConsoleErrors = testInfo.title === 'recovers an offline submission after refresh'
+    ? ['console.error: Failed to load resource: net::ERR_FAILED']
+    : testInfo.title === 'renders empty and error states with retry'
+      ? ['console.error: Failed to load resource: the server responded with a status of 503 (Service Unavailable)']
+      : [];
+  const relevantErrors = errors.filter((error) => !expectedConsoleErrors.includes(error));
 
   expect(relevantErrors, 'browser console and page errors').toEqual([]);
 });
 
 export const startGame = async (page: Page) => {
+  const touchPortrait = await page.evaluate(() => navigator.maxTouchPoints > 0 && innerHeight > innerWidth);
+  if (touchPortrait) await page.setViewportSize({ width: 915, height: 412 });
   await page.getByRole('button', { name: 'Play', exact: true }).click();
   await expect(page.getByRole('heading', { name: 'Loading the fleet…' })).toBeHidden({ timeout: 15_000 });
   await expect.poll(() => page.evaluate(() => Boolean(window.__PIRATE_BATTLE_TEST__))).toBe(true);

@@ -17,6 +17,7 @@ type Props = {
   inputRef: React.MutableRefObject<Set<InputAction>>;
   pauseRequest: number;
   gameOptions: GameOptions;
+  suspended: boolean;
 };
 
 type ShipView = {
@@ -33,9 +34,11 @@ type ShipView = {
 const shipTexture = (ship: ShipState) =>
   ship.kind === 'player' ? ASSETS.player : ship.kind === 'chaser' ? ASSETS.chaser : ASSETS.shooter;
 
-export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, onLoadError, inputRef, pauseRequest, gameOptions }: Props) {
+export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, onLoadError, inputRef, pauseRequest, gameOptions, suspended }: Props) {
   const hostRef = useRef<HTMLDivElement>(null);
   const simulationRef = useRef<GameSimulation | null>(null);
+  const suspendedRef = useRef(suspended);
+  suspendedRef.current = suspended;
 
   useEffect(() => {
     const simulation = simulationRef.current;
@@ -62,6 +65,7 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
     let resizeFrame: number | null = null;
     let tickHandler: ((ticker: Ticker) => void) | null = null;
     let waterTexture: Texture | null = null;
+    let cachedMapLayer: Container | null = null;
     let snapshotAccumulator = 0;
     let finalSnapshotSent = false;
     let removeTestBridge: (() => void) | null = null;
@@ -81,6 +85,8 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
     const inputState = inputRef.current;
     const e2eMode = isE2EMode();
     const performanceMode = isPerformanceMode();
+    const mobileRenderer = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+    const snapshotInterval = mobileRenderer ? 0.2 : 0.1;
     const requestedSeed = Number(new URLSearchParams(window.location.search).get('seed') ?? 1337);
     const simulation = new GameSimulation(gameOptions, e2eMode || performanceMode ? createSeededRandom(requestedSeed) : Math.random);
     simulationRef.current = simulation;
@@ -119,10 +125,15 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
           height: GAME_CONFIG.arena.height,
           resizeTo: hostRef.current ?? window,
           background: '#28afd0',
-          antialias: true,
+          antialias: !mobileRenderer,
           autoDensity: true,
-          resolution: Math.min(window.devicePixelRatio, 2),
+          resolution: mobileRenderer ? 1 : Math.min(window.devicePixelRatio, 2),
+          preference: 'webgl',
+          powerPreference: 'high-performance',
         });
+        app.stage.eventMode = 'none';
+        app.ticker.maxFPS = 60;
+        app.ticker.minFPS = 30;
         initialized = true;
         if (disposed || !hostRef.current) {
           app.destroy({ removeView: true }, { children: true });
@@ -143,7 +154,13 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
 
         const world = new Container();
         app.stage.addChild(world);
-        waterTexture = buildMap(world);
+        const mapLayer = new Container();
+        world.addChild(mapLayer);
+        waterTexture = buildMap(mapLayer);
+        if (mobileRenderer) {
+          mapLayer.cacheAsTexture({ resolution: 1, antialias: false });
+          cachedMapLayer = mapLayer;
+        }
         const entityLayer = new Container();
         world.addChild(entityLayer);
         let worldScale = 1;
@@ -277,7 +294,6 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
             sprite.rotation = 0;
             sprite.scale.set(effect.kind === 'explosion' ? 0.62 : 0.23);
             effectViews.set(effect.id, sprite);
-            entityLayer.addChild(sprite);
             const sound = effect.kind === 'explosion'
               ? ASSETS.sounds.explosion
               : effect.kind === 'muzzle'
@@ -354,7 +370,7 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
             finalSnapshotSent = true;
             snapshotAccumulator = 0;
             emitSnapshot();
-          } else if (forceSnapshot || (!simulation.gameOver && snapshotAccumulator >= 0.1)) {
+          } else if (forceSnapshot || (!simulation.gameOver && snapshotAccumulator >= snapshotInterval)) {
             snapshotAccumulator = 0;
             emitSnapshot();
           }
@@ -366,6 +382,9 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
           removePerformanceBridge = performanceBridge.remove;
         }
         tickHandler = (ticker: Ticker) => {
+          if (!app) return;
+          app.stage.visible = !suspendedRef.current;
+          if (suspendedRef.current) return;
           const dt = e2eMode ? 0 : ticker.deltaMS / 1000;
           simulation.update(dt, inputState);
           renderFrame(false, dt);
@@ -399,6 +418,7 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
       }
       audioPool.clear();
       if (tickHandler && app) app.ticker.remove(tickHandler);
+      cachedMapLayer?.cacheAsTexture(false);
       if (initialized) app?.destroy({ removeView: true }, { children: true });
       waterTexture?.destroy(false);
     };

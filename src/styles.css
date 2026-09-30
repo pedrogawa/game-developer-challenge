@@ -122,6 +122,9 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .keyboard-help span { display: flex; align-items: center; gap: 4px; }
 kbd { min-width: 20px; padding: 2px 5px; border: 1px solid #9ed9e4; border-radius: 4px; background: #173f50; text-align: center; box-shadow: 0 2px #05202d; }
 .modal { position: fixed; z-index: 10; inset: 0; display: grid; place-items: center; padding: 18px; background: #04192799; backdrop-filter: blur(4px); }
+.orientation-lock { z-index: 30; padding: max(18px, env(safe-area-inset-top)) max(18px, env(safe-area-inset-right)) max(18px, env(safe-area-inset-bottom)) max(18px, env(safe-area-inset-left)); }
+.orientation-panel { display: grid; justify-items: center; }
+.orientation-icon { width: 58px; margin-bottom: 7px; filter: drop-shadow(0 3px 3px #0008); }
 .battle-modal { padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left)); }
 .battle-menu-panel { width: min(590px, 92vw); height: min(540px, 88dvh); display: flex; flex-direction: column; align-items: center; justify-content: center; padding: clamp(62px, 9vh, 86px) clamp(70px, 9vw, 105px); background: url('/png/default/ui/menu/panel_menu.png') center / 100% 100% no-repeat; filter: drop-shadow(0 20px 34px #00131ed1); text-align: center; }
 .battle-menu-panel h1 { margin: 0 0 clamp(6px, 1.2vh, 13px); color: #ffe8ad; font: 900 clamp(27px, 3.6vw, 42px) system-ui, sans-serif; letter-spacing: .025em; text-transform: uppercase; text-shadow: 0 3px #132330, 0 5px #0006; }
@@ -280,6 +283,11 @@ kbd { min-width: 20px; padding: 2px 5px; border: 1px solid #9ed9e4; border-radiu
   .log-empty strong { font-size: 14px; }
   .log-empty span { max-width: 240px; font-size: 9px; }
   .log-main-menu { width: 64%; }
+}
+
+@media (pointer: coarse) {
+  .game-shell .health-panel, .game-shell .counter, .game-shell .round { filter: none; }
+  .game-shell .health-fill { transition: none; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -23,6 +23,10 @@ const queryParameters = new URLSearchParams(window.location.search);
 const networkLabEnabled = import.meta.env.DEV
   || queryParameters.get('debug') === 'network'
   || queryParameters.get('e2e') === '1';
+const portraitQuery = '(orientation: portrait)';
+const isTouchDevice = () => navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
+const isTouchPortrait = () => isTouchDevice()
+  && (window.matchMedia(portraitQuery).matches || window.innerHeight > window.innerWidth);
 
 const initialSnapshot = (sessionDuration: number): GameSnapshot => ({
   health: 100, maxHealth: 100, score: 0, timeRemaining: sessionDuration, paused: false, gameOver: false, endReason: null,
@@ -69,17 +73,21 @@ export function App() {
   const [gameAnnouncement, setGameAnnouncement] = useState('');
   const [restartToken, setRestartToken] = useState(0);
   const [pauseRequest, setPauseRequest] = useState(0);
+  const [touchPortrait, setTouchPortrait] = useState(isTouchPortrait);
   const inputRef = useRef<Set<InputAction>>(new Set());
   const matchIdRef = useRef<string | null>(null);
   const recordedMatchIdRef = useRef<string | null>(null);
   const pauseResumeRef = useRef<HTMLButtonElement>(null);
   const resultPrimaryRef = useRef<HTMLButtonElement>(null);
   const retryAssetsRef = useRef<HTMLButtonElement>(null);
+  const orientationExitRef = useRef<HTMLButtonElement>(null);
   const announcedSnapshotRef = useRef({ health: 100, score: 0, paused: false, gameOver: false });
+  const orientationBlocked = screen === 'game' && touchPortrait && !optionsOpen && !snapshot.gameOver;
   const pauseHotkeyEnabled = screen === 'game'
     && !loading
     && !loadError
     && !snapshot.gameOver
+    && !orientationBlocked
     && !optionsOpen;
   const gameplayInteractive = pauseHotkeyEnabled && !snapshot.paused;
 
@@ -121,6 +129,20 @@ export function App() {
     queryClient.clear();
     setLogPage(1);
     setNetworkScenariosOpen(false);
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia(portraitQuery);
+    const updateOrientation = () => setTouchPortrait(isTouchPortrait());
+    updateOrientation();
+    mediaQuery.addEventListener('change', updateOrientation);
+    window.addEventListener('resize', updateOrientation);
+    window.addEventListener('orientationchange', updateOrientation);
+    return () => {
+      mediaQuery.removeEventListener('change', updateOrientation);
+      window.removeEventListener('resize', updateOrientation);
+      window.removeEventListener('orientationchange', updateOrientation);
+    };
   }, []);
 
   useEffect(() => {
@@ -310,7 +332,7 @@ export function App() {
   const elapsed = Math.floor(Math.max(0, matchOptions.sessionDuration - snapshot.timeRemaining));
   const elapsedLabel = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
   const healthRatio = snapshot.health / snapshot.maxHealth;
-  const gameOverlayOpen = loading || Boolean(loadError) || optionsOpen || snapshot.paused || snapshot.gameOver;
+  const gameOverlayOpen = loading || Boolean(loadError) || optionsOpen || orientationBlocked || snapshot.paused || snapshot.gameOver;
   const loadPercentage = Math.round(loadProgress * 100);
 
   return (
@@ -330,6 +352,7 @@ export function App() {
           inputRef={inputRef}
           pauseRequest={pauseRequest}
           gameOptions={matchOptions}
+          suspended={orientationBlocked || snapshot.paused || snapshot.gameOver || optionsOpen}
         />
 
         <header className="hud">
@@ -372,7 +395,22 @@ export function App() {
         </section>
       </main>
       <AccessibleDialog
-        open={loading && !loadError}
+        open={orientationBlocked}
+        labelledBy="orientation-title"
+        describedBy="orientation-description"
+        panelClassName="panel orientation-panel"
+        overlayClassName="modal orientation-lock"
+        role="alertdialog"
+        initialFocusRef={orientationExitRef}
+        closeOnEscape={false}
+      >
+        <img className="orientation-icon" src="/png/default/ui/controls/icon_turn_right.png" alt="" />
+        <h1 id="orientation-title">Rotate to play</h1>
+        <p id="orientation-description">Pirate Battle requires landscape orientation on touch devices.</p>
+        <button ref={orientationExitRef} className="primary" type="button" onClick={returnToMenu}>Main Menu</button>
+      </AccessibleDialog>
+      <AccessibleDialog
+        open={loading && !loadError && !orientationBlocked}
         labelledBy="loading-title"
         describedBy="loading-description"
         panelClassName="panel"
@@ -386,7 +424,7 @@ export function App() {
         </div>
       </AccessibleDialog>
       <AccessibleDialog
-        open={Boolean(loadError)}
+        open={Boolean(loadError) && !orientationBlocked}
         labelledBy="load-error-title"
         describedBy="load-error-description"
         panelClassName="panel"
@@ -400,7 +438,7 @@ export function App() {
         <button ref={retryAssetsRef} className="primary" type="button" onClick={restart}>Try again</button>
       </AccessibleDialog>
       <AccessibleDialog
-        open={snapshot.paused && !snapshot.gameOver && !optionsOpen}
+        open={snapshot.paused && !snapshot.gameOver && !optionsOpen && !orientationBlocked}
         labelledBy="pause-title"
         describedBy="pause-description"
         panelClassName="battle-menu-panel"

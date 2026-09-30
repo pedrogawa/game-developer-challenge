@@ -41,3 +41,17 @@ test('@mobile completes the primary menu-to-game flow on a touch viewport', asyn
   await expect(page.getByRole('group', { name: 'Touch controls' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Sail forward' })).toBeEnabled();
 });
+
+test('@mobile suspends touch gameplay in portrait until the device is landscape', async ({ page, openApp }) => {
+  test.skip(!await page.evaluate(() => navigator.maxTouchPoints > 0), 'Touch context required');
+  await page.setViewportSize({ width: 390, height: 844 });
+  await openApp();
+  await page.getByRole('button', { name: 'Play', exact: true }).click();
+  await expect(page.getByRole('heading', { name: 'Rotate to play' })).toBeVisible();
+  await expect(page.locator('.touch-controls')).toHaveAttribute('aria-hidden', 'true');
+
+  await page.setViewportSize({ width: 844, height: 390 });
+  await expect(page.getByRole('heading', { name: 'Rotate to play' })).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Loading the fleet…' })).toBeHidden({ timeout: 15_000 });
+  await expect(page.getByRole('button', { name: 'Sail forward' })).toBeEnabled();
+});
