@@ -113,6 +113,10 @@ button:focus-visible, select:focus-visible, input:focus-visible { outline: 3px s
 .round:hover { background-image: url('/png/default/ui/controls/button_round_hover.png'); }
 .round:active { background-image: url('/png/default/ui/controls/button_round_pressed.png'); transform: translateY(2px) scale(.97); }
 .round img { width: 50%; height: 50%; object-fit: contain; pointer-events: none; }
+.cooldown-button { position: relative; overflow: hidden; }
+.cooldown-button img { position: relative; z-index: 1; }
+.cooldown-shade { position: absolute; z-index: 2; top: 0; right: 0; left: 0; height: var(--cooldown-ratio, 0%); border-radius: 50% 50% 20% 20%; background: #06151dcc; box-shadow: inset 0 -2px #d9a44299; pointer-events: none; transition: height .1s linear; }
+.cooldown-button.cooling-down { cursor: wait; }
 .hud .round { pointer-events: auto; width: clamp(44px, 3.6vw, 52px); }
 .touch-controls { position: absolute; z-index: 3; right: max(12px, env(safe-area-inset-right)); bottom: max(10px, env(safe-area-inset-bottom)); left: max(12px, env(safe-area-inset-left)); display: flex; justify-content: space-between; pointer-events: none; }
 .movement-controls, .attack-controls { display: flex; align-items: end; gap: clamp(4px, .6vw, 10px); pointer-events: auto; }
@@ -140,6 +144,10 @@ kbd { min-width: 20px; padding: 2px 5px; border: 1px solid #9ed9e4; border-radiu
 .result-registration.saved { color: #aee0a0; }
 .result-registration.failed { color: #f0a69d; }
 .result-retry { margin: -12px 0 13px; font-size: clamp(9px, .8vw, 12px); }
+.result-name-field { width: min(290px, 82%); display: grid; gap: 4px; margin: 0 0 10px; color: #f4dfad; font: 800 clamp(9px, .85vw, 12px) system-ui, sans-serif; letter-spacing: .05em; text-align: left; text-transform: uppercase; }
+.result-name-field input { width: 100%; min-height: 38px; border: 3px solid #875020; border-radius: 7px; padding: 6px 10px; color: #fff4db; background: #0b2638; box-shadow: inset 0 0 0 1px #d39a45; font: 700 clamp(13px, 1.1vw, 16px) system-ui, sans-serif; user-select: text; }
+.result-name-field input:disabled { color: #bdd0d5; opacity: .8; }
+.result-name-error { margin: -7px 0 9px !important; color: #ffaea4 !important; font-size: 11px !important; }
 .panel { width: min(440px, 88%); padding: clamp(24px, 4vw, 54px); border: 5px solid #874817; border-radius: 24px; background: linear-gradient(#233d50, #10293b); box-shadow: inset 0 0 0 3px #d99a41, 0 18px 50px #000a; text-align: center; }
 .panel h1 { margin: 0 0 12px; color: #ffe5a5; font-size: clamp(28px, 4vw, 52px); text-shadow: 0 3px #71380d; }
 .panel p { margin: 8px 0 24px; font: 500 clamp(14px, 1.5vw, 19px) system-ui, sans-serif; color: #cce8ed; }

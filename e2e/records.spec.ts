@@ -1,4 +1,4 @@
-import { configureGame, expect, finishByTime, setScenario, startGame, test } from './fixtures';
+import { configureGame, expect, finishByTime, saveResult, setScenario, startGame, test } from './fixtures';
 
 test('loads and paginates Ranking and Match History', async ({ page, openApp }) => {
   await openApp('multiple-pages');
@@ -33,11 +33,15 @@ test('registers a match and updates ranking and history', async ({ page, openApp
   await startGame(page);
   await configureGame(page, { score: 99 });
   await finishByTime(page);
+  await page.getByLabel('Captain name').fill('A');
+  await page.getByRole('button', { name: 'Save Score' }).click();
+  await expect(page.getByRole('alert')).toContainText('Use 2 to 20 characters');
+  await saveResult(page, 'Black Pearl');
   await expect(page.getByText('Match saved')).toBeVisible();
   await page.getByRole('button', { name: 'Main Menu' }).click();
 
   await page.getByRole('button', { name: 'Ranking', exact: true }).click();
-  await expect(page.getByRole('table', { name: 'Ranking' })).toContainText('E2E Captain');
+  await expect(page.getByRole('table', { name: 'Ranking' })).toContainText('Black Pearl');
   await expect(page.getByRole('table', { name: 'Ranking' })).toContainText('99');
   await page.getByRole('button', { name: 'Match History', exact: true }).click();
   await expect(page.getByRole('table', { name: 'Match history' })).toContainText('99');
@@ -48,6 +52,7 @@ test('recovers an offline submission after refresh', async ({ page, openApp }) =
   await startGame(page);
   await configureGame(page, { score: 31 });
   await finishByTime(page);
+  await saveResult(page);
   await expect(page.getByText('Match pending — retry available')).toBeVisible();
   await page.reload();
   await expect(page.getByText(/1 match is waiting to sync/)).toBeVisible();

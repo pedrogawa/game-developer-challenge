@@ -1,6 +1,9 @@
 import type { PlayerIdentity } from './contracts';
 
 const PLAYER_KEY = 'pirate-battle-player-v1';
+export const PLAYER_NAME_LIMITS = { min: 2, max: 20 } as const;
+
+export const normalizePlayerName = (name: string) => name.trim().replace(/\s+/g, ' ');
 
 const createId = () => typeof crypto.randomUUID === 'function'
   ? crypto.randomUUID()
@@ -20,4 +23,14 @@ export const getOrCreatePlayer = (): PlayerIdentity => {
   const player = { id, name: `Captain ${id.slice(0, 4).toUpperCase()}` };
   try { localStorage.setItem(PLAYER_KEY, JSON.stringify(player)); } catch { /* Gameplay remains available. */ }
   return player;
+};
+
+export const savePlayerName = (player: PlayerIdentity, name: string): PlayerIdentity => {
+  const normalized = normalizePlayerName(name);
+  if (normalized.length < PLAYER_NAME_LIMITS.min || normalized.length > PLAYER_NAME_LIMITS.max) {
+    throw new RangeError(`Captain name must contain ${PLAYER_NAME_LIMITS.min} to ${PLAYER_NAME_LIMITS.max} characters.`);
+  }
+  const updated = { ...player, name: normalized };
+  try { localStorage.setItem(PLAYER_KEY, JSON.stringify(updated)); } catch { /* The in-memory identity remains usable. */ }
+  return updated;
 };

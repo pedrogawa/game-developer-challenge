@@ -42,6 +42,8 @@ npm run preview
 
 Keyboard and touch actions can be combined. Losing focus or hiding the tab pauses the active match automatically.
 
+The three weapon buttons share the ship's weapon cooldown. After firing, a dark radial-button overlay recedes as the cannons become ready; additional taps during that interval are ignored. When a match ends, enter a captain name from 2 to 20 characters and choose **Save Score**. The saved name is reused in future matches and appears in Ranking and Match History.
+
 Touch gameplay requires landscape orientation. Menus remain available in portrait, but starting or returning to an active battle displays a rotation prompt and suspends PixiJS until the device is landscape again.
 
 ### Gameplay configuration
@@ -89,9 +91,10 @@ To reproduce registration recovery:
 
 1. Select **Offline at finish** or **Timeout after save**.
 2. Complete a match.
-3. Return to **Network scenarios** and select **Success**.
-4. Use **Retry save** or **Retry sync**.
-5. Open Ranking and Match History to confirm the match appears once.
+3. Enter a captain name and choose **Save Score**.
+4. Return to **Network scenarios** and select **Success**.
+5. Use **Retry save** or **Retry sync**.
+6. Open Ranking and Match History to confirm the match appears once.
 
 Use **Reset mock data** to restore the Success scenario and seed `1337`, clear confirmed and pending matches, clear the last result, and reset request ordering. Player identity and gameplay options are intentionally preserved.
 

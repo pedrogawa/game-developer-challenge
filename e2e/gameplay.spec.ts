@@ -65,6 +65,8 @@ test('runs Chaser, Shooter and seeded spawn interval rules', async ({ page }) =>
   const chaser = await advanceGame(page, 100);
   expect(chaser.player.health).toBeLessThan(100);
   expect(chaser.enemies).toHaveLength(0);
+  expect(chaser.effects.filter(({ kind }) => kind === 'explosion')).toHaveLength(1);
+  expect(chaser.effects.filter(({ kind }) => kind === 'hit')).toHaveLength(0);
 
   await configureGame(page, {
     player: { x: 600, y: 350 },
@@ -98,4 +100,15 @@ test('@mobile touch controls drive the same movement and weapon rules', async ({
   const fired = await advanceGame(page, 10);
   await page.mouse.up();
   expect(fired.projectiles.some(({ owner }) => owner === 'player')).toBe(true);
+  await expect(fire).toHaveAttribute('aria-disabled', 'true');
+  const initialShade = await fire.locator('.cooldown-shade').evaluate((element) => parseFloat(getComputedStyle(element).height));
+  expect(initialShade).toBeGreaterThan(0);
+
+  await fire.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'touch', isPrimary: true, buttons: 1 });
+  await advanceGame(page, 100);
+  await fire.dispatchEvent('pointerup', { pointerId: 2, pointerType: 'touch', isPrimary: true });
+  expect((await gameState(page)).projectiles).toHaveLength(1);
+
+  await advanceGame(page, 400);
+  await expect(fire).not.toHaveAttribute('aria-disabled', 'true');
 });

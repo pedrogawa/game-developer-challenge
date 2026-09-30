@@ -72,6 +72,7 @@ export class GameSimulation {
       health: player ? playerConfig.maxHealth : enemyConfig.maxHealth,
       maxHealth: player ? playerConfig.maxHealth : enemyConfig.maxHealth,
       radius: player ? playerConfig.radius : enemyConfig.radius,
+      fireCooldownDuration: 0,
     };
   }
 
@@ -109,7 +110,7 @@ export class GameSimulation {
       }
       if (distance < enemy.radius + this.player.radius) {
         if (enemy.kind === 'chaser') {
-          this.damage(this.player, enemyConfig.contactDamage, false);
+          this.damage(this.player, enemyConfig.contactDamage, false, false);
           this.destroyEnemy(enemy, false);
         } else {
           this.separate(enemy, this.player);
@@ -170,6 +171,7 @@ export class GameSimulation {
       'cannon',
     );
     ship.fireCooldown = owner === 'player' ? weapons.frontCooldown : enemyConfig.fireCooldown;
+    ship.fireCooldownDuration = ship.fireCooldown;
   }
 
   private fireBroadside(ship: ShipState, side: -1 | 1) {
@@ -191,6 +193,7 @@ export class GameSimulation {
       'broadside',
     );
     ship.fireCooldown = weapons.broadsideCooldown;
+    ship.fireCooldownDuration = ship.fireCooldown;
   }
 
   private createProjectile(x: number, y: number, direction: { x: number; y: number }, owner: 'player' | 'enemy') {
@@ -230,10 +233,10 @@ export class GameSimulation {
     ship.y += Math.sin(angle) * enemyConfig.separationDistance;
   }
 
-  private damage(ship: ShipState, amount: number, awardsPoint: boolean) {
+  private damage(ship: ShipState, amount: number, awardsPoint: boolean, showHitEffect = true) {
     if (!ship.alive || this.gameOver) return;
     ship.health = Math.max(0, ship.health - amount);
-    this.addEffect('hit', ship.x, ship.y, effects.hit);
+    if (showHitEffect) this.addEffect('hit', ship.x, ship.y, effects.hit);
     if (ship.health === 0) {
       if (ship.kind === 'player') {
         ship.alive = false;

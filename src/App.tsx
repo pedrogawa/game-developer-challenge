@@ -9,7 +9,7 @@ import { DEFAULT_GAME_OPTIONS, GAME_OPTION_LIMITS } from './game/config';
 import type { GameOptions } from './game/config';
 import type { GameSnapshot, InputAction } from './game/types';
 import type { MatchRecord } from './data/contracts';
-import { getOrCreatePlayer } from './data/player';
+import { getOrCreatePlayer, normalizePlayerName, PLAYER_NAME_LIMITS, savePlayerName } from './data/player';
 import { getErrorMessage } from './data/http';
 import { useHistoryQuery, useRankingQuery } from './data/queries';
 import { useMatchRegistration } from './data/useMatchRegistration';
@@ -28,7 +28,8 @@ const isTouchDevice = () => navigator.maxTouchPoints > 0 || 'ontouchstart' in wi
 const isTouchPortrait = () => isTouchDevice() && window.innerHeight > window.innerWidth;
 
 const initialSnapshot = (sessionDuration: number): GameSnapshot => ({
-  health: 100, maxHealth: 100, score: 0, timeRemaining: sessionDuration, paused: false, gameOver: false, endReason: null,
+  health: 100, maxHealth: 100, fireCooldown: 0, fireCooldownDuration: 0,
+  score: 0, timeRemaining: sessionDuration, paused: false, gameOver: false, endReason: null,
 });
 
 const validStep = (value: unknown, limits: { min: number; max: number; step: number }) =>
@@ -61,7 +62,9 @@ export function App() {
   const [screen, setScreen] = useState<'menu' | 'game' | 'ranking' | 'history'>('menu');
   const [options, setOptions] = useState<GameOptions>(loadOptions);
   const [matchOptions, setMatchOptions] = useState<GameOptions>(() => ({ ...DEFAULT_GAME_OPTIONS }));
-  const [player] = useState(getOrCreatePlayer);
+  const [player, setPlayer] = useState(getOrCreatePlayer);
+  const [playerName, setPlayerName] = useState(player.name);
+  const [playerNameError, setPlayerNameError] = useState('');
   const [optionsOpen, setOptionsOpen] = useState(false);
   const [networkScenariosOpen, setNetworkScenariosOpen] = useState(false);
   const [logPage, setLogPage] = useState(1);
@@ -78,6 +81,7 @@ export function App() {
   const recordedMatchIdRef = useRef<string | null>(null);
   const pauseResumeRef = useRef<HTMLButtonElement>(null);
   const resultPrimaryRef = useRef<HTMLButtonElement>(null);
+  const resultNameRef = useRef<HTMLInputElement>(null);
   const retryAssetsRef = useRef<HTMLButtonElement>(null);
   const orientationExitRef = useRef<HTMLButtonElement>(null);
   const announcedSnapshotRef = useRef({ health: 100, score: 0, paused: false, gameOver: false });
@@ -203,14 +207,24 @@ export function App() {
     if (announcement) setGameAnnouncement(announcement);
   }, [screen, snapshot.endReason, snapshot.gameOver, snapshot.health, snapshot.maxHealth, snapshot.paused, snapshot.score]);
 
-  useEffect(() => {
+  const saveCompletedMatch = () => {
     const matchId = matchIdRef.current;
     if (!snapshot.gameOver || !snapshot.endReason || !matchId || recordedMatchIdRef.current === matchId) return;
+    const normalizedName = normalizePlayerName(playerName);
+    if (normalizedName.length < PLAYER_NAME_LIMITS.min || normalizedName.length > PLAYER_NAME_LIMITS.max) {
+      setPlayerNameError(`Use ${PLAYER_NAME_LIMITS.min} to ${PLAYER_NAME_LIMITS.max} characters.`);
+      resultNameRef.current?.focus();
+      return;
+    }
+    const updatedPlayer = savePlayerName(player, normalizedName);
+    setPlayer(updatedPlayer);
+    setPlayerName(updatedPlayer.name);
+    setPlayerNameError('');
     recordedMatchIdRef.current = matchId;
     const record: MatchRecord = {
       matchId,
-      playerId: player.id,
-      playerName: player.name,
+      playerId: updatedPlayer.id,
+      playerName: updatedPlayer.name,
       playedAt: new Date().toISOString(),
       score: snapshot.score,
       durationSeconds: Math.floor(Math.max(0, matchOptions.sessionDuration - snapshot.timeRemaining)),
@@ -218,7 +232,7 @@ export function App() {
       config: { ...matchOptions },
     };
     registerCompletedMatch(record);
-  }, [matchOptions, player, registerCompletedMatch, snapshot.endReason, snapshot.gameOver, snapshot.score, snapshot.timeRemaining]);
+  };
 
   const setInput = (action: InputAction, pressed: boolean) => {
     if (pressed && gameplayInteractive) inputRef.current.add(action);
@@ -247,6 +261,8 @@ export function App() {
       ? crypto.randomUUID()
       : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
     recordedMatchIdRef.current = null;
+    setPlayerName(player.name);
+    setPlayerNameError('');
     announcedSnapshotRef.current = { health: 100, score: 0, paused: false, gameOver: false };
     setGameAnnouncement('Battle started.');
     registration.resetStatus();
@@ -331,6 +347,9 @@ export function App() {
   const elapsed = Math.floor(Math.max(0, matchOptions.sessionDuration - snapshot.timeRemaining));
   const elapsedLabel = `${String(Math.floor(elapsed / 60)).padStart(2, '0')}:${String(elapsed % 60).padStart(2, '0')}`;
   const healthRatio = snapshot.health / snapshot.maxHealth;
+  const weaponCooldownRatio = snapshot.fireCooldownDuration > 0
+    ? Math.max(0, Math.min(1, snapshot.fireCooldown / snapshot.fireCooldownDuration))
+    : 0;
   const gameOverlayOpen = loading || Boolean(loadError) || optionsOpen || orientationBlocked || snapshot.paused || snapshot.gameOver;
   const loadPercentage = Math.round(loadProgress * 100);
 
@@ -377,7 +396,7 @@ export function App() {
           </div>
         </header>
 
-        <TouchControls setInput={setInput} disabled={!gameplayInteractive} />
+        <TouchControls setInput={setInput} disabled={!gameplayInteractive} cooldownRatio={weaponCooldownRatio} />
 
         <aside className="keyboard-help" aria-label="Keyboard controls">
           <span><kbd>W</kbd> sail</span><span><kbd>A</kbd><kbd>D</kbd> turn</span><span><kbd>Space</kbd> front</span><span><kbd>Q</kbd><kbd>E</kbd> broadsides</span><span><kbd>P</kbd> pause</span>
@@ -458,7 +477,7 @@ export function App() {
         labelledBy="result-title"
         panelClassName="battle-menu-panel result-panel"
         overlayClassName="modal battle-modal"
-        initialFocusRef={resultPrimaryRef}
+        initialFocusRef={registration.status === 'idle' ? resultNameRef : resultPrimaryRef}
         closeOnEscape={false}
       >
         <h1 id="result-title">Battle Complete</h1>
@@ -467,7 +486,25 @@ export function App() {
           <span>Points</span><b aria-hidden="true">·</b><span>{elapsedLabel}</span><b aria-hidden="true">·</b>
           <span>{snapshot.endReason === 'sunk' ? 'Ship Sunk' : 'Time Up'}</span>
         </p>
+        <label className="result-name-field">
+          <span>Captain name</span>
+          <input
+            ref={resultNameRef}
+            type="text"
+            value={playerName}
+            minLength={PLAYER_NAME_LIMITS.min}
+            maxLength={PLAYER_NAME_LIMITS.max}
+            disabled={registration.status !== 'idle'}
+            autoComplete="nickname"
+            enterKeyHint="done"
+            onChange={(event) => { setPlayerName(event.target.value); setPlayerNameError(''); }}
+            onKeyDown={(event) => { if (event.key === 'Enter') saveCompletedMatch(); }}
+            aria-describedby={playerNameError ? 'result-name-error' : undefined}
+          />
+        </label>
+        {playerNameError && <p id="result-name-error" className="result-name-error" role="alert">{playerNameError}</p>}
         <p className={`result-registration ${registration.status}`} aria-live="polite">
+          {registration.status === 'idle' && 'Enter your captain name to save this score'}
           {registration.status === 'saving' && 'Saving match…'}
           {registration.status === 'saved' && 'Match saved'}
           {registration.status === 'failed' && 'Match pending — retry available'}
@@ -476,8 +513,15 @@ export function App() {
           <button className="secondary-text result-retry" type="button" onClick={registration.retryCurrent}>Retry save</button>
         )}
         <div className="battle-menu-actions">
-          <button ref={resultPrimaryRef} className="menu-button menu-button-primary" type="button" onClick={startGame}><span>Play Again</span></button>
-          <button className="menu-button menu-button-primary" type="button" onClick={returnToMenu}><span>Main Menu</span></button>
+          {registration.status === 'idle' && (
+            <button ref={resultPrimaryRef} className="menu-button menu-button-primary" type="button" onClick={saveCompletedMatch}><span>Save Score</span></button>
+          )}
+          {registration.status !== 'idle' && registration.status !== 'saving' && (
+            <>
+              <button ref={resultPrimaryRef} className="menu-button menu-button-primary" type="button" onClick={startGame}><span>Play Again</span></button>
+              <button className="menu-button menu-button-primary" type="button" onClick={returnToMenu}><span>Main Menu</span></button>
+            </>
+          )}
         </div>
       </AccessibleDialog>
       <OptionsModal
@@ -492,9 +536,13 @@ export function App() {
   );
 }
 
-function TouchControls({ setInput, disabled }: { setInput: (action: InputAction, pressed: boolean) => void; disabled: boolean }) {
-  const bind = (action: InputAction) => ({
-    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => { event.currentTarget.setPointerCapture(event.pointerId); setInput(action, true); },
+function TouchControls({ setInput, disabled, cooldownRatio }: { setInput: (action: InputAction, pressed: boolean) => void; disabled: boolean; cooldownRatio: number }) {
+  const bind = (action: InputAction, blocked = false) => ({
+    onPointerDown: (event: React.PointerEvent<HTMLButtonElement>) => {
+      if (blocked) return;
+      event.currentTarget.setPointerCapture(event.pointerId);
+      setInput(action, true);
+    },
     onPointerUp: () => setInput(action, false),
     onPointerCancel: () => setInput(action, false),
     onLostPointerCapture: () => setInput(action, false),
@@ -508,10 +556,38 @@ function TouchControls({ setInput, disabled }: { setInput: (action: InputAction,
         <button className="round" type="button" disabled={disabled} {...bind('right')} aria-label="Turn right"><img src="/png/default/ui/controls/icon_turn_right.png" alt="" /></button>
       </div>
       <div className="attack-controls" role="group" aria-label="Attack controls">
-        <button className="round" type="button" disabled={disabled} {...bind('fireLeft')} aria-label="Fire left broadside"><img src="/png/default/ui/controls/icon_fire_left.png" alt="" /></button>
-        <button className="round front-fire" type="button" disabled={disabled} {...bind('fireFront')} aria-label="Fire front cannon"><img src="/png/default/ui/controls/icon_fire_front.png" alt="" /></button>
-        <button className="round" type="button" disabled={disabled} {...bind('fireRight')} aria-label="Fire right broadside"><img src="/png/default/ui/controls/icon_fire_right.png" alt="" /></button>
+        <CooldownButton className="round" action="fireLeft" label="Fire left broadside" icon="/png/default/ui/controls/icon_fire_left.png" disabled={disabled} cooldownRatio={cooldownRatio} bind={bind} />
+        <CooldownButton className="round front-fire" action="fireFront" label="Fire front cannon" icon="/png/default/ui/controls/icon_fire_front.png" disabled={disabled} cooldownRatio={cooldownRatio} bind={bind} />
+        <CooldownButton className="round" action="fireRight" label="Fire right broadside" icon="/png/default/ui/controls/icon_fire_right.png" disabled={disabled} cooldownRatio={cooldownRatio} bind={bind} />
       </div>
     </div>
+  );
+}
+
+type CooldownButtonProps = {
+  className: string;
+  action: InputAction;
+  label: string;
+  icon: string;
+  disabled: boolean;
+  cooldownRatio: number;
+  bind: (action: InputAction, blocked?: boolean) => React.HTMLAttributes<HTMLButtonElement>;
+};
+
+function CooldownButton({ className, action, label, icon, disabled, cooldownRatio, bind }: CooldownButtonProps) {
+  const coolingDown = cooldownRatio > 0;
+  return (
+    <button
+      className={`${className} cooldown-button${coolingDown ? ' cooling-down' : ''}`}
+      type="button"
+      disabled={disabled}
+      aria-disabled={coolingDown || undefined}
+      {...bind(action, coolingDown)}
+      aria-label={label}
+      style={{ '--cooldown-ratio': `${cooldownRatio * 100}%` } as React.CSSProperties}
+    >
+      <img src={icon} alt="" />
+      <span className="cooldown-shade" aria-hidden="true" />
+    </button>
   );
 }

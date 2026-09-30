@@ -1,11 +1,12 @@
 import { GAME_CONFIG } from './config';
 import type { GameSimulation } from './simulation';
-import type { InputAction, ProjectileState, ShipState } from './types';
+import type { EffectState, InputAction, ProjectileState, ShipState } from './types';
 
 export type GameTestState = {
   player: ShipState;
   enemies: ShipState[];
   projectiles: ProjectileState[];
+  effects: EffectState[];
   score: number;
   timeRemaining: number;
   spawnCooldown: number;
@@ -52,6 +53,7 @@ const cloneState = (simulation: GameSimulation): GameTestState => ({
   player: { ...simulation.player },
   enemies: simulation.enemies.map((enemy) => ({ ...enemy })),
   projectiles: simulation.projectiles.map((shot) => ({ ...shot })),
+  effects: simulation.effects.map((effect) => ({ ...effect })),
   score: simulation.score,
   timeRemaining: simulation.timeRemaining,
   spawnCooldown: simulation.spawnCooldown,
@@ -77,6 +79,7 @@ export const installGameTestBridge = (
         maxHealth: GAME_CONFIG.enemy.maxHealth,
         radius: GAME_CONFIG.enemy.radius,
         fireCooldown: 0,
+        fireCooldownDuration: 0,
         alive: true,
         ...enemy,
       }));

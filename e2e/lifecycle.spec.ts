@@ -1,4 +1,4 @@
-import { advanceGame, configureGame, expect, finishByTime, gameState, holdKey, startGame, test } from './fixtures';
+import { advanceGame, configureGame, expect, finishByTime, gameState, holdKey, saveResult, startGame, test } from './fixtures';
 
 test.beforeEach(async ({ openApp, page }) => {
   await openApp();
@@ -15,6 +15,8 @@ test('ends by time, freezes the simulation and restarts cleanly', async ({ page 
   await advanceGame(page, 5_000);
   expect((await gameState(page)).timeRemaining).toBe(finished.timeRemaining);
 
+  await saveResult(page);
+  await expect(page.getByText('Match saved')).toBeVisible();
   await page.getByRole('button', { name: 'Play Again' }).click();
   await expect(page.getByRole('heading', { name: 'Loading the fleet…' })).toBeHidden({ timeout: 15_000 });
   await expect.poll(() => gameState(page).then(({ score }) => score)).toBe(0);
@@ -60,9 +62,12 @@ test('shows and persists the completed result across refresh', async ({ page }) 
   await configureGame(page, { score: 12 });
   await finishByTime(page);
   await expect(page.getByLabel('12 points')).toBeVisible();
+  await saveResult(page, 'Twelve Seas');
+  await expect(page.getByText('Match saved')).toBeVisible();
   const savedBefore = await page.evaluate(() => JSON.parse(localStorage.getItem('pirate-battle-last-match-v1') ?? 'null'));
   expect(savedBefore.score).toBe(12);
   expect(savedBefore.endReason).toBe('time');
+  expect(savedBefore.playerName).toBe('Twelve Seas');
 
   await page.reload();
   await expect(page.getByRole('img', { name: 'Pirate Battle' })).toBeVisible();

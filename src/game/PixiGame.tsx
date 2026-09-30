@@ -48,6 +48,8 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
       onSnapshot({
         health: simulation.player.health,
         maxHealth: simulation.player.maxHealth,
+        fireCooldown: simulation.player.fireCooldown,
+        fireCooldownDuration: simulation.player.fireCooldownDuration,
         score: simulation.score,
         timeRemaining: simulation.timeRemaining,
         paused: simulation.paused,
@@ -87,6 +89,7 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
     const performanceMode = isPerformanceMode();
     const mobileRenderer = navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
     const snapshotInterval = mobileRenderer ? 0.2 : 0.1;
+    const soundCooldowns = new Map<string, number>();
     const requestedSeed = Number(new URLSearchParams(window.location.search).get('seed') ?? 1337);
     const simulation = new GameSimulation(gameOptions, e2eMode || performanceMode ? createSeededRandom(requestedSeed) : Math.random);
     simulationRef.current = simulation;
@@ -97,11 +100,16 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
 
     const playSound = (source: string, volume: number, loop = false) => {
       if (e2eMode) return null;
+      const now = performance.now();
+      if (mobileRenderer && !loop && now - (soundCooldowns.get(source) ?? -Infinity) < 90) return null;
+      if (mobileRenderer && !loop && activeAudio.size >= 6) return null;
+      soundCooldowns.set(source, now);
       const pooled = audioPool.get(source);
       const audio = pooled?.pop() ?? new Audio(source);
+      audio.preload = 'auto';
       audio.volume = volume;
       audio.loop = loop;
-      audio.currentTime = 0;
+      try { audio.currentTime = 0; } catch { /* Metadata may still be loading on iOS. */ }
       activeAudio.add(audio);
       const releaseAudio = () => {
         if (!activeAudio.delete(audio) || loop) return;
@@ -117,8 +125,19 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
       return audio;
     };
 
+    const primeAudioPool = () => {
+      if (e2eMode) return;
+      for (const source of new Set(Object.values(ASSETS.sounds))) {
+        const audio = new Audio(source);
+        audio.preload = 'auto';
+        audio.load();
+        audioPool.set(source, [audio]);
+      }
+    };
+
     const start = async () => {
       try {
+        primeAudioPool();
         app = new Application();
         await app.init({
           width: GAME_CONFIG.arena.width,
@@ -310,6 +329,8 @@ export function PixiGame({ restartToken, onSnapshot, onLoadProgress, onLoaded, o
         const emitSnapshot = () => onSnapshot({
           health: simulation.player.health,
           maxHealth: simulation.player.maxHealth,
+          fireCooldown: simulation.player.fireCooldown,
+          fireCooldownDuration: simulation.player.fireCooldownDuration,
           score: simulation.score,
           timeRemaining: simulation.timeRemaining,
           paused: simulation.paused,

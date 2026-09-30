@@ -10,6 +10,7 @@ export type ShipState = Vec & {
   radius: number;
   kind: 'player' | EnemyKind;
   fireCooldown: number;
+  fireCooldownDuration: number;
   alive: boolean;
 };
 
@@ -33,6 +34,8 @@ export type EffectState = Vec & {
 export type GameSnapshot = {
   health: number;
   maxHealth: number;
+  fireCooldown: number;
+  fireCooldownDuration: number;
   score: number;
   timeRemaining: number;
   paused: boolean;

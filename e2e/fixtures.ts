@@ -13,9 +13,10 @@ type Scenario =
   | 'offline-at-finish';
 
 export type TestGameState = {
-  player: { x: number; y: number; angle: number; health: number; maxHealth: number; fireCooldown: number; alive: boolean };
+  player: { x: number; y: number; angle: number; health: number; maxHealth: number; fireCooldown: number; fireCooldownDuration: number; alive: boolean };
   enemies: Array<{ id: number; kind: 'chaser' | 'shooter'; x: number; y: number; angle: number; health: number; alive: boolean }>;
   projectiles: Array<{ id: number; owner: 'player' | 'enemy'; x: number; y: number }>;
+  effects: Array<{ id: number; kind: 'muzzle' | 'explosion' | 'hit'; x: number; y: number }>;
   score: number;
   timeRemaining: number;
   spawnCooldown: number;
@@ -94,6 +95,11 @@ export const finishByTime = async (page: Page) => {
   await configureGame(page, { timeRemaining: 0.05, enemies: [], spawnCooldown: 999 });
   await advanceGame(page, 100);
   await expect(page.getByRole('heading', { name: 'Battle Complete' })).toBeVisible();
+};
+
+export const saveResult = async (page: Page, name = 'E2E Captain') => {
+  await page.getByLabel('Captain name').fill(name);
+  await page.getByRole('button', { name: 'Save Score' }).click();
 };
 
 export const setScenario = async (page: Page, id: Scenario) => {
