@@ -101,8 +101,8 @@ test('@mobile touch controls drive the same movement and weapon rules', async ({
   await page.mouse.up();
   expect(fired.projectiles.some(({ owner }) => owner === 'player')).toBe(true);
   await expect(fire).toHaveAttribute('aria-disabled', 'true');
-  const initialShade = await fire.locator('.cooldown-shade').evaluate((element) => parseFloat(getComputedStyle(element).height));
-  expect(initialShade).toBeGreaterThan(0);
+  await expect.poll(() => fire.locator('.cooldown-shade')
+    .evaluate((element) => parseFloat(getComputedStyle(element).height))).toBeGreaterThan(0);
 
   await fire.dispatchEvent('pointerdown', { pointerId: 2, pointerType: 'touch', isPrimary: true, buttons: 1 });
   await advanceGame(page, 100);
