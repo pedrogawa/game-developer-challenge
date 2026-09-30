@@ -19,6 +19,10 @@ import type { MockScenarioConfig } from './mocks/scenarios';
 
 const OPTIONS_STORAGE_KEY = 'pirate-battle-options-v1';
 const LOG_PAGE_SIZE = 5;
+const queryParameters = new URLSearchParams(window.location.search);
+const networkLabEnabled = import.meta.env.DEV
+  || queryParameters.get('debug') === 'network'
+  || queryParameters.get('e2e') === '1';
 
 const initialSnapshot = (sessionDuration: number): GameSnapshot => ({
   health: 100, maxHealth: 100, score: 0, timeRemaining: sessionDuration, paused: false, gameOver: false, endReason: null,
@@ -244,7 +248,7 @@ export function App() {
           onOptions={() => setOptionsOpen(true)}
           onRanking={() => { setLogPage(1); setScreen('ranking'); }}
           onHistory={() => { setLogPage(1); setScreen('history'); }}
-          onNetworkScenarios={() => setNetworkScenariosOpen(true)}
+          onNetworkScenarios={networkLabEnabled ? () => setNetworkScenariosOpen(true) : undefined}
           pendingCount={registration.pendingCount}
           onRetryPending={() => { void registration.flushPending(); }}
         />

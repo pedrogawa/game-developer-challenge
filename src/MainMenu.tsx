@@ -3,7 +3,7 @@ type Props = {
   onOptions: () => void;
   onRanking: () => void;
   onHistory: () => void;
-  onNetworkScenarios: () => void;
+  onNetworkScenarios?: () => void;
   pendingCount?: number;
   onRetryPending?: () => void;
 };
@@ -49,7 +49,9 @@ export function MainMenu({ onPlay, onOptions, onRanking, onHistory, onNetworkSce
             <span>Match History</span>
           </button>
         </nav>
-        <button className="network-lab-link" type="button" onClick={onNetworkScenarios}>Network scenarios</button>
+        {onNetworkScenarios && (
+          <button className="network-lab-link" type="button" onClick={onNetworkScenarios}>Network scenarios</button>
+        )}
         {pendingCount > 0 && (
           <div className="pending-sync" role="status">
             <span>{pendingCount} match {pendingCount === 1 ? 'is' : 'are'} waiting to sync</span>

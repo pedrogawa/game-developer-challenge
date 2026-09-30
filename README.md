@@ -53,7 +53,9 @@ Options persist in local storage. Each new match receives an immutable snapshot 
 
 ### Network scenarios and failure reproduction
 
-Open **Network scenarios** on the main menu, select a scenario and deterministic seed, then choose **Apply**. The selection survives refreshes and clears cached Ranking and Match History queries.
+The Network Lab is intentionally hidden from regular players. In development and E2E it is enabled automatically; in a published build, add `?debug=network` to the URL to show **Network scenarios** on the main menu. Select a scenario and deterministic seed, then choose **Apply**. The selection survives refreshes and clears cached Ranking and Match History queries.
+
+The same controls are available from the browser console through `pirateBattleDebug.network`: use `list()`, `current()`, `select('slow', 1337)`, or `reset()`. This keeps the demonstration tools available without exposing technical failure controls in the normal player experience.
 
 Available scenarios cover success, empty data, multiple pages, slow or variable latency, out-of-order responses, timeout, connection failure, HTTP 429/503, isolated Ranking or History errors, timeout after a committed match, and an unavailable registration endpoint at match completion.
 
@@ -330,7 +332,7 @@ Inclua os relatórios de testes e profiling. A solução deve executar a partir 
 
 ## Mock scenario controls
 
-Open **Network scenarios** on the main menu to select a reproducible MSW mode. The selected mode and deterministic seed survive refreshes. Applying a mode clears the TanStack Query cache so the next Ranking or Match History visit uses the new behavior.
+In development/E2E, open **Network scenarios** on the main menu to select a reproducible MSW mode. In the published build, enable the same UI with `?debug=network`, or use `pirateBattleDebug.network` from the browser console. The selected mode and deterministic seed survive refreshes. Applying a mode clears the TanStack Query cache so the next Ranking or Match History visit uses the new behavior.
 
 Available modes cover normal success, empty lists, multiple pages, fixed slowness, seeded variable latency, out-of-order responses, client timeout, connection failure, HTTP 429/503, isolated Ranking or History failure, timeout after a successful server-side save, and an unavailable registration endpoint at match completion. For the recovery modes, switch back to **Success** and use **Retry save** or **Retry sync**. Registration is idempotent by `matchId`, so a commit followed by timeout cannot create duplicates.
 
