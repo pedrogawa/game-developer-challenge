@@ -25,8 +25,7 @@ const networkLabEnabled = import.meta.env.DEV
   || queryParameters.get('e2e') === '1';
 const portraitQuery = '(orientation: portrait)';
 const isTouchDevice = () => navigator.maxTouchPoints > 0 || 'ontouchstart' in window;
-const isTouchPortrait = () => isTouchDevice()
-  && (window.matchMedia(portraitQuery).matches || window.innerHeight > window.innerWidth);
+const isTouchPortrait = () => isTouchDevice() && window.innerHeight > window.innerWidth;
 
 const initialSnapshot = (sessionDuration: number): GameSnapshot => ({
   health: 100, maxHealth: 100, score: 0, timeRemaining: sessionDuration, paused: false, gameOver: false, endReason: null,
