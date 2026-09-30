@@ -1,5 +1,104 @@
 # Desafio React & Pixi JS — Pirate Battle
 
+## Solution guide
+
+Pirate Battle is a browser-based, single-player naval shooter implemented with React, strict TypeScript, and PixiJS. It includes keyboard and touch combat, configurable matches, accessible responsive menus, local Ranking and Match History APIs mocked through MSW, deterministic failure scenarios, Playwright coverage, and a reproducible performance profile.
+
+### Public deployment
+
+The production URL will be added here after the repository is linked and deployed to Vercel. The published build uses the same in-browser MSW handlers and requires no private service.
+
+### Requirements and setup
+
+- Node.js 22.12 or newer
+- npm 10 or newer
+- Chromium installed through Playwright for E2E tests
+
+No environment variables, secrets, private APIs, databases, or external services are required.
+
+```bash
+npm ci
+npm run dev
+```
+
+Open the URL printed by Vite. For a production-equivalent local run:
+
+```bash
+npm run build
+npm run preview
+```
+
+### Controls
+
+| Action | Keyboard | Touch |
+| --- | --- | --- |
+| Sail forward | `W` or `Arrow Up` | Forward arrow |
+| Turn left | `A` or `Arrow Left` | Left arrow |
+| Turn right | `D` or `Arrow Right` | Right arrow |
+| Front cannon | `Space` | Front-fire button |
+| Left broadside | `Q` | Left-fire button |
+| Right broadside | `E` | Right-fire button |
+| Pause or resume | `P` or `Escape` | Pause button |
+
+Keyboard and touch actions can be combined. Losing focus or hiding the tab pauses the active match automatically.
+
+### Gameplay configuration
+
+Open **Options** from the main menu to configure:
+
+- Game session time: 60–180 seconds, in 30-second increments.
+- Enemy spawn time: 2–15 seconds, in 1-second increments.
+
+Options persist in local storage. Each new match receives an immutable snapshot of the current options. All other balance values—including health, speed, rotation, damage, cooldowns, projectile lifetime, Shooter range, and spawn positions—are centralized in [`src/game/config.ts`](src/game/config.ts).
+
+### Network scenarios and failure reproduction
+
+Open **Network scenarios** on the main menu, select a scenario and deterministic seed, then choose **Apply**. The selection survives refreshes and clears cached Ranking and Match History queries.
+
+Available scenarios cover success, empty data, multiple pages, slow or variable latency, out-of-order responses, timeout, connection failure, HTTP 429/503, isolated Ranking or History errors, timeout after a committed match, and an unavailable registration endpoint at match completion.
+
+To reproduce registration recovery:
+
+1. Select **Offline at finish** or **Timeout after save**.
+2. Complete a match.
+3. Return to **Network scenarios** and select **Success**.
+4. Use **Retry save** or **Retry sync**.
+5. Open Ranking and Match History to confirm the match appears once.
+
+Use **Reset mock data** to restore the Success scenario and seed `1337`, clear confirmed and pending matches, clear the last result, and reset request ordering. Player identity and gameplay options are intentionally preserved.
+
+### Commands
+
+| Command | Purpose |
+| --- | --- |
+| `npm run dev` | Start the Vite development server |
+| `npm run build` | Type-check and create the optimized build |
+| `npm run preview` | Serve the optimized build locally |
+| `npm run typecheck` | Run strict TypeScript validation |
+| `npm run lint` | Run ESLint |
+| `npm test` | Run MSW integration tests with Vitest |
+| `npm run test:e2e` | Run Playwright desktop/mobile and visual tests |
+| `npm run test:e2e:update` | Update intentional visual baselines |
+| `npm run test:e2e:report` | Open the Playwright HTML report |
+| `npm run test:performance` | Build and run the three-minute hardware-accelerated profile |
+| `npm run test:performance:report` | Open the performance Playwright report |
+| `npm run validate` | Run types, lint, unit tests, build, and the complete E2E suite |
+
+E2E failures retain traces, screenshots, and video under `test-results/`. Versioned reports are available in [`playwright-report/`](playwright-report/) and [`performance/playwright-report/`](performance/playwright-report/). Performance evidence is documented in [`performance/REPORT.md`](performance/REPORT.md) and [`performance/evidence/latest.json`](performance/evidence/latest.json).
+
+### Project structure
+
+- `src/game/`: simulation, PixiJS renderer, gameplay configuration, test clock, and profiling bridge.
+- `src/data/`: typed API contracts, Axios client, TanStack Query hooks, and registration mutation.
+- `src/mocks/`: shared MSW handlers, fixtures, scenarios, browser worker, and Node test server.
+- `e2e/`: isolated Playwright gameplay, lifecycle, data, touch, and visual tests.
+- `performance/`: optimized-build profiling test and captured evidence.
+- `assets/`: all supplied visual and audio resources plus the MSW worker.
+
+See [`ARCHITECTURE.md`](ARCHITECTURE.md) for design decisions and [`CREDITS.md`](CREDITS.md) for asset provenance.
+
+## Original challenge specification
+
 Desenvolva um **shooter naval 2D com visão superior** usando React, TypeScript e PixiJS. O jogador deve navegar entre ilhas, enfrentar navios inimigos e acumular pontos até o fim da partida.
 
 O desafio avalia gameplay, domínio de PixiJS, arquitetura, integração de dados, experiência de uso e qualidade da entrega. Informe sua estimativa de prazo antes de iniciar.
@@ -174,11 +273,29 @@ Use cenários com seed e controle do tempo da simulação para tornar os testes 
 
 Cada teste deve partir de um estado isolado. Entregue relatório HTML e traces das falhas.
 
+### Section 8 implementation notes
+
+- `npm run test:e2e` runs the complete Chromium desktop/mobile matrix.
+- `npm run test:e2e:update` updates the versioned menu, arena, and result baselines.
+- `npm run test:e2e:report` opens the generated HTML report in `playwright-report/`.
+- Failures retain traces, screenshots, and video in `test-results/`.
+- A fixed seed and a bridge enabled only through `?e2e=1` observe state and control the clock while preserving real inputs, rules, collisions, AI, and rendering.
+- The mapping between the twelve requirements and test files is documented in `e2e/README.md`.
+
 ## 9. Performance do jogo
 
 Avalie a performance do combate em build otimizado, com **60 FPS como alvo** no ambiente de referência documentado. Registre taxa de quadros, percentil 95 do tempo entre frames e quantidade de entidades em uma partida de três minutos.
 
 Verifique o uso de memória após cinco ciclos de iniciar, jogar e sair, investigando crescimento contínuo de recursos. Entregue evidências de profiling com hardware, navegador, resolução, configuração da partida e limitações observadas.
+
+### Section 9 implementation notes
+
+- `npm run test:performance` creates the optimized build, launches hardware-accelerated Chromium, runs five lifecycle cycles, and measures a real three-minute match.
+- The reference scenario uses seed `1337`, a 180-second match, two-second spawns, a 1440×900 viewport, and DPR 1. Profiling-only player protection prevents an early death; rules, AI, collisions, projectiles, effects, audio, ticker, and rendering remain active.
+- The Apple M1 Pro/Chromium 153 Metal run recorded 119.94 average FPS, a 9.20 ms p95, one sample above 16.67 ms, and at most 62 entities.
+- After cache warmup, five cycles produced 0.95 MiB of heap growth, no DOM-node growth, and no canvas left on the menu.
+- Full evidence is available in `performance/REPORT.md`, `performance/evidence/latest.json`, `performance/evidence/three-minute-combat.png`, and `performance/playwright-report/`.
+- `performance/HEADLESS_DIAGNOSTIC.md` separately documents the headless Chromium limitation that selected SwiftShader instead of the machine GPU.
 
 ## 10. Critérios de avaliação
 
@@ -208,3 +325,25 @@ O `README.md` da solução deve incluir setup, variáveis de ambiente, controles
 Documente em `ARCHITECTURE.md` a integração React/PixiJS, o ciclo da simulação, colisões, gerenciamento de recursos, persistência local e integração do ranking e histórico, incluindo contratos, cache e recuperação de registros pendentes. Registre limitações e decisões de balanceamento.
 
 Inclua os relatórios de testes e profiling. A solução deve executar a partir de um checkout limpo, sem depender de serviços privados.
+
+## Mock scenario controls
+
+Open **Network scenarios** on the main menu to select a reproducible MSW mode. The selected mode and deterministic seed survive refreshes. Applying a mode clears the TanStack Query cache so the next Ranking or Match History visit uses the new behavior.
+
+Available modes cover normal success, empty lists, multiple pages, fixed slowness, seeded variable latency, out-of-order responses, client timeout, connection failure, HTTP 429/503, isolated Ranking or History failure, timeout after a successful server-side save, and an unavailable registration endpoint at match completion. For the recovery modes, switch back to **Success** and use **Retry save** or **Retry sync**. Registration is idempotent by `matchId`, so a commit followed by timeout cannot create duplicates.
+
+**Reset mock data** restores the Success scenario and seed `1337`, clears confirmed matches, pending submissions, the last completed result, request counters, and cached record queries. Gameplay options and the persistent player identity are intentionally preserved.
+
+Tests can import `mockServer`, `startMockServer`, `resetMockServer`, and `stopMockServer` from `src/mocks/server.ts`; select scenarios programmatically through `selectMockScenario` from `src/mocks/controls.ts`. Call `resetMockServer()` after each test to restore handlers, storage, seed, and request ordering.
+
+Run the shared MSW integration suite with `npm test`.
+
+## Interface, assets, and accessibility notes
+
+The game supports both portrait and landscape orientation on phones and tablets. Changing orientation or viewport size resizes the PixiJS renderer and camera without restarting or changing the active simulation. HUD and touch controls respect browser safe-area insets, and touch targets keep a minimum 44×44 CSS-pixel hit area.
+
+All visual and audio resources used by the game come from the supplied [`assets/`](assets/) package. The UI uses the individual PNG exports documented by the supplied UI atlases. See [`CREDITS.md`](CREDITS.md) for provenance details; no external fonts, images, or audio resources were added.
+
+Menus and record views use native keyboard controls and visible focus indicators. Options, network, loading, error, pause, and result overlays manage focus as modal dialogs and make their background inert. Gameplay keys and pointer controls are active only while combat is running without an overlay. The visual HUD has a separate semantic health, score, time, and match-state representation; only important combat events are announced to assistive technology. Browser zoom and reduced-motion/high-contrast preferences are supported.
+
+Game textures report a visible loading percentage, and asset failures open an accessible retry dialog. Audio uses the provided WAV effects and ocean ambience and is gracefully skipped when browser autoplay policy prevents playback.

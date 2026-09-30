@@ -1,0 +1,108 @@
+{
+  "capturedAt": "2026-09-30T11:18:24.876Z",
+  "environment": {
+    "platform": "darwin 24.5.0 (arm64)",
+    "cpu": "Apple M1 Pro",
+    "logicalCpuCount": 8,
+    "totalMemoryBytes": 17179869184,
+    "browser": "Chromium 153.0.8010.12",
+    "userAgent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/153.0.0.0 Safari/537.36",
+    "gpu": "ANGLE (Apple, ANGLE Metal Renderer: Apple M1 Pro, Unspecified Version)",
+    "viewport": "1440x900",
+    "deviceScaleFactor": 1
+  },
+  "configuration": {
+    "sessionDuration": 180,
+    "spawnInterval": 2,
+    "seed": 1337,
+    "playerProtection": true
+  },
+  "combat": {
+    "sampleCount": 21572,
+    "measuredDurationMs": 179861.9,
+    "averageFps": 119.93646236362454,
+    "averageFrameTimeMs": 8.33774800667532,
+    "p95FrameTimeMs": 9.200000000000728,
+    "p99FrameTimeMs": 9.30000000000291,
+    "maximumFrameTimeMs": 108.60000000000002,
+    "framesOver16_67Ms": 1,
+    "framesOver33_33Ms": 1,
+    "averageEntities": 33.15339328759503,
+    "maximumEntities": {
+      "ships": 47,
+      "enemies": 46,
+      "projectiles": 8,
+      "effects": 10,
+      "total": 62
+    },
+    "finalEntities": {
+      "ships": 47,
+      "enemies": 46,
+      "projectiles": 3,
+      "effects": 2,
+      "total": 52
+    }
+  },
+  "memory": {
+    "samples": [
+      {
+        "label": "Menu baseline",
+        "jsHeapUsedBytes": 4741568,
+        "jsHeapTotalBytes": 5341184,
+        "domNodes": 125,
+        "documents": 2,
+        "canvases": 0
+      },
+      {
+        "label": "After cycle 1",
+        "jsHeapUsedBytes": 7594356,
+        "jsHeapTotalBytes": 8486912,
+        "domNodes": 157,
+        "documents": 2,
+        "canvases": 0
+      },
+      {
+        "label": "After cycle 2",
+        "jsHeapUsedBytes": 7884764,
+        "jsHeapTotalBytes": 9011200,
+        "domNodes": 157,
+        "documents": 2,
+        "canvases": 0
+      },
+      {
+        "label": "After cycle 3",
+        "jsHeapUsedBytes": 8128668,
+        "jsHeapTotalBytes": 9011200,
+        "domNodes": 157,
+        "documents": 2,
+        "canvases": 0
+      },
+      {
+        "label": "After cycle 4",
+        "jsHeapUsedBytes": 8331708,
+        "jsHeapTotalBytes": 9011200,
+        "domNodes": 157,
+        "documents": 2,
+        "canvases": 0
+      },
+      {
+        "label": "After cycle 5",
+        "jsHeapUsedBytes": 8592892,
+        "jsHeapTotalBytes": 9273344,
+        "domNodes": 157,
+        "documents": 2,
+        "canvases": 0
+      }
+    ],
+    "growthAfterWarmupBytes": 998536,
+    "nodeGrowthAfterWarmup": 0,
+    "allowedHeapGrowthBytes": 5242880,
+    "stable": true
+  },
+  "limitations": [
+    "Headed Chromium is required so the reference run uses the machine GPU; headless Chromium used SwiftShader and was retained only as a diagnostic result.",
+    "Forced garbage collection makes lifecycle samples comparable but does not measure GPU-driver allocations directly.",
+    "The player receives profiling-only health protection; spawning, AI, projectiles, collisions, effects, audio, rendering, and the real-time ticker remain active.",
+    "The Playwright process and Vite preview server add background system load, so results should be compared on the same machine."
+  ]
+}
